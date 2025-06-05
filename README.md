@@ -12,7 +12,7 @@ A modern, responsive calculator built with React.js.
 - Mobile-responsive design
 
 ## Live Demo
-[View Calculator](https://github.com/supr-inego/Calculator-)
+[View Calculator](https://calculator-qvav64aqx-supr-inegos-projects.vercel.app/)
 
 ## Usage
 Simply open `index.html` in any modern web browser.
