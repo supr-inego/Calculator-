@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Calculator</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .calculator {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 24px;
+            width: 100%;
+            max-width: 320px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .display {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            min-height: 60px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .history {
+            color: #6b7280;
+            font-size: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: right;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 4px;
+        }
+        
+        .current {
+            color: #111827;
+            font-size: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            text-align: right;
+        }
+        
+        .error {
+            color: #ef4444;
+            font-size: 14px;
+            text-align: center;
+            height: 20px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+        
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        
+        .btn {
+            font-weight: 600;
+            padding: 16px;
+            border-radius: 12px;
+            transition: all 0.15s;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-number {
+            background: #f3f4f6;
+            color: #111827;
+        }
+        
+        .btn-number:hover {
+            background: #e5e7eb;
+        }
+        
+        .btn-operator {
+            background: #3b82f6;
+            color: white;
+            font-size: 20px;
+        }
+        
+        .btn-operator:hover {
+            background: #2563eb;
+        }
+        
+        .btn-function {
+            background: #f97316;
+            color: white;
+        }
+        
+        .btn-function:hover {
+            background: #ea580c;
+        }
+        
+        .btn-equals {
+            background: #22c55e;
+            color: white;
+            font-size: 20px;
+        }
+        
+        .btn-equals:hover {
+            background: #16a34a;
+        }
+        
+        .btn-zero {
+            grid-column: span 2;
+        }
+        
+        .brand {
+            text-align: center;
+            margin-top: 16px;
+            color: #9ca3af;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        function Calculator() {
+            const [state, setState] = useState({
+                currentInput: "0",
+                previousInput: "",
+                operator: "",
+                waitingForOperand: false,
+                history: "",
+                errorMessage: ""
+            });
+
+            const showError = (message) => {
+                setState(prev => ({ ...prev, errorMessage: message }));
+                setTimeout(() => {
+                    setState(prev => ({ ...prev, errorMessage: "" }));
+                }, 3000);
+            };
+
+            const inputNumber = (num) => {
+                setState(prev => {
+                    if (prev.waitingForOperand) {
+                        return {
+                            ...prev,
+                            currentInput: num,
+                            waitingForOperand: false,
+                            errorMessage: ""
+                        };
+                    } else {
+                        return {
+                            ...prev,
+                            currentInput: prev.currentInput === "0" ? num : prev.currentInput + num,
+                            errorMessage: ""
+                        };
+                    }
+                });
+            };
+
+            const inputDecimal = () => {
+                setState(prev => {
+                    if (prev.waitingForOperand) {
+                        return {
+                            ...prev,
+                            currentInput: "0.",
+                            waitingForOperand: false,
+                            errorMessage: ""
+                        };
+                    } else if (prev.currentInput.indexOf('.') === -1) {
+                        return {
+                            ...prev,
+                            currentInput: prev.currentInput + ".",
+                            errorMessage: ""
+                        };
+                    }
+                    return { ...prev, errorMessage: "" };
+                });
+            };
+
+            const clear = () => {
+                setState(prev => ({
+                    ...prev,
+                    currentInput: "0",
+                    errorMessage: ""
+                }));
+            };
+
+            const allClear = () => {
+                setState({
+                    currentInput: "0",
+                    previousInput: "",
+                    operator: "",
+                    waitingForOperand: false,
+                    history: "",
+                    errorMessage: ""
+                });
+            };
+
+            const performCalculation = (prev, current, operator) => {
+                switch (operator) {
+                    case '+':
+                        return prev + current;
+                    case '-':
+                        return prev - current;
+                    case '×':
+                        return prev * current;
+                    case '÷':
+                        if (current === 0) {
+                            showError("Cannot divide by zero");
+                            return null;
+                        }
+                        return prev / current;
+                    default:
+                        return null;
+                }
+            };
+
+            const formatResult = (result) => {
+                const rounded = Math.round((result + Number.EPSILON) * 100000000) / 100000000;
+                
+                if (Math.abs(rounded) > 999999999 || (Math.abs(rounded) < 0.000001 && rounded !== 0)) {
+                    return rounded.toExponential(6);
+                } else {
+                    return rounded.toString();
+                }
+            };
+
+            const inputOperator = (nextOperator) => {
+                setState(prev => {
+                    const inputValue = parseFloat(prev.currentInput);
+
+                    if (prev.previousInput === "") {
+                        return {
+                            ...prev,
+                            previousInput: prev.currentInput,
+                            waitingForOperand: true,
+                            operator: nextOperator,
+                            history: `${prev.currentInput} ${nextOperator}`,
+                            errorMessage: ""
+                        };
+                    } else if (prev.operator && !prev.waitingForOperand) {
+                        const prevValue = parseFloat(prev.previousInput);
+                        const result = performCalculation(prevValue, inputValue, prev.operator);
+                        
+                        if (result === null) {
+                            return prev;
+                        }
+
+                        const formattedResult = formatResult(result);
+                        return {
+                            ...prev,
+                            currentInput: formattedResult,
+                            previousInput: formattedResult,
+                            waitingForOperand: true,
+                            operator: nextOperator,
+                            history: `${formattedResult} ${nextOperator}`,
+                            errorMessage: ""
+                        };
+                    } else {
+                        return {
+                            ...prev,
+                            waitingForOperand: true,
+                            operator: nextOperator,
+                            history: `${prev.previousInput} ${nextOperator}`,
+                            errorMessage: ""
+                        };
+                    }
+                });
+            };
+
+            const calculate = () => {
+                setState(prev => {
+                    if (prev.operator && prev.previousInput !== "" && !prev.waitingForOperand) {
+                        const prevValue = parseFloat(prev.previousInput);
+                        const currentValue = parseFloat(prev.currentInput);
+                        const result = performCalculation(prevValue, currentValue, prev.operator);
+                        
+                        if (result === null) {
+                            return prev;
+                        }
+
+                        const formattedResult = formatResult(result);
+                        return {
+                            ...prev,
+                            currentInput: formattedResult,
+                            previousInput: "",
+                            operator: "",
+                            waitingForOperand: true,
+                            history: `${prev.previousInput} ${prev.operator} ${prev.currentInput} =`,
+                            errorMessage: ""
+                        };
+                    }
+                    return { ...prev, errorMessage: "" };
+                });
+            };
+
+            const percentage = () => {
+                setState(prev => {
+                    const inputValue = parseFloat(prev.currentInput);
+                    if (!isNaN(inputValue)) {
+                        return {
+                            ...prev,
+                            currentInput: (inputValue / 100).toString(),
+                            errorMessage: ""
+                        };
+                    }
+                    return { ...prev, errorMessage: "" };
+                });
+            };
+
+            return (
+                <div className="calculator">
+                    <div className="display">
+                        <div className="history">{state.history || ""}</div>
+                        <div className="current">{state.currentInput}</div>
+                    </div>
+                    
+                    <div className="error">{state.errorMessage}</div>
+
+                    <div className="buttons">
+                        <button className="btn btn-function" onClick={clear}>C</button>
+                        <button className="btn btn-function" onClick={allClear}>AC</button>
+                        <button className="btn btn-function" onClick={percentage}>%</button>
+                        <button className="btn btn-operator" onClick={() => inputOperator('÷')}>÷</button>
+
+                        <button className="btn btn-number" onClick={() => inputNumber('7')}>7</button>
+                        <button className="btn btn-number" onClick={() => inputNumber('8')}>8</button>
+                        <button className="btn btn-number" onClick={() => inputNumber('9')}>9</button>
+                        <button className="btn btn-operator" onClick={() => inputOperator('×')}>×</button>
+
+                        <button className="btn btn-number" onClick={() => inputNumber('4')}>4</button>
+                        <button className="btn btn-number" onClick={() => inputNumber('5')}>5</button>
+                        <button className="btn btn-number" onClick={() => inputNumber('6')}>6</button>
+                        <button className="btn btn-operator" onClick={() => inputOperator('-')}>−</button>
+
+                        <button className="btn btn-number" onClick={() => inputNumber('1')}>1</button>
+                        <button className="btn btn-number" onClick={() => inputNumber('2')}>2</button>
+                        <button className="btn btn-number" onClick={() => inputNumber('3')}>3</button>
+                        <button className="btn btn-operator" onClick={() => inputOperator('+')}>+</button>
+
+                        <button className="btn btn-number btn-zero" onClick={() => inputNumber('0')}>0</button>
+                        <button className="btn btn-number" onClick={inputDecimal}>.</button>
+                        <button className="btn btn-equals" onClick={calculate}>=</button>
+                    </div>
+                    
+                    <div className="brand">Professional Calculator v1.0</div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(Calculator));
+    </script>
+</body>
+</html>
